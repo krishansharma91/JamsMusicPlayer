@@ -223,7 +223,7 @@ public class AudioPlaybackService extends Service {
         mAudioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
   
         //Initialize Google Analytics.
-        initGoogleAnalytics();
+        //initGoogleAnalytics();
         
         //Initialize the MediaPlayer objects.
         initMediaPlayers();
@@ -385,12 +385,16 @@ public class AudioPlaybackService extends Service {
 			}
 			
 			if (isShuffleOn() && !playAll) {
-				//Shuffle all elements before and after the current index.
-                Random preSubListSeed = new Random();
-                Random postSubListSeed = new Random();
-	    		Collections.shuffle(getPlaybackIndecesList().subList(0, getCurrentSongIndex()), preSubListSeed);
-	    		Collections.shuffle(getPlaybackIndecesList().subList(getCurrentSongIndex()+1, getPlaybackIndecesList().size()),
-                                    postSubListSeed);
+                //Build a new list that doesn't include the current song index.
+                ArrayList<Integer> newList = new ArrayList<Integer>(getPlaybackIndecesList());
+                newList.remove(getCurrentSongIndex());
+
+                //Shuffle the new list.
+                Collections.shuffle(newList, new Random(System.nanoTime()));
+
+                //Plug in the current song index back into the new list.
+                newList.add(getCurrentSongIndex(), getCurrentSongIndex());
+                mPlaybackIndecesList = newList;
 
 			} else if (isShuffleOn() && playAll) {
                 //Shuffle all elements.
@@ -2266,6 +2270,23 @@ public class AudioPlaybackService extends Service {
      * False, otherwise.
      */
     public boolean skipToPreviousTrack() {
+
+        /*
+         * If the current track is not within the first three seconds,
+         * reset it. If it IS within the first three seconds, skip to the
+         * previous track.
+         */
+        try {
+            if (getCurrentMediaPlayer().getCurrentPosition() > 3000) {
+                getCurrentMediaPlayer().seekTo(0);
+                return true;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
     	try {
     		//Reset both MediaPlayer objects.
     		getMediaPlayer().reset();
@@ -2411,9 +2432,19 @@ public class AudioPlaybackService extends Service {
     		//Set shuffle on.
     		mApp.getSharedPreferences().edit().putBoolean(Common.SHUFFLE_ON, true).commit();
     		
-    		//Shuffle all elements before and after the current index.
-    		Collections.shuffle(getPlaybackIndecesList().subList(0, getCurrentSongIndex()));
-    		Collections.shuffle(getPlaybackIndecesList().subList(getCurrentSongIndex()+1, getPlaybackIndecesList().size()));
+            //Build a new list that doesn't include the current song index.
+            ArrayList<Integer> newList = new ArrayList<Integer>(getPlaybackIndecesList());
+            newList.remove(getCurrentSongIndex());
+
+            //Shuffle the new list.
+            Collections.shuffle(newList, new Random(System.nanoTime()));
+
+            //Plug in the current song index back into the new list.
+            newList.add(getCurrentSongIndex(), getCurrentSongIndex());
+            mPlaybackIndecesList = newList;
+
+    		//Collections.shuffle(getPlaybackIndecesList().subList(0, getCurrentSongIndex()));
+    		//Collections.shuffle(getPlaybackIndecesList().subList(getCurrentSongIndex()+1, getPlaybackIndecesList().size()));
     		
     	}
     	
